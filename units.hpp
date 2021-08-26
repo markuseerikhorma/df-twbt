@@ -21,7 +21,7 @@ struct unit_hook : public df::unit
         renderer_cool *r = (renderer_cool*)enabler->renderer;
 
         df::coord _pos = Units::getPosition(this);
-        if (pos.x-mwindow_x >= 0 && pos.y-gwindow_y >= 0 && pos.x-mwindow_x < r->gdimx && pos.y-gwindow_y < r->gdimy)
+         if (pos.x-mwindow_x >= 0 && pos.y-gwindow_y >= 0 && pos.x-mwindow_x < r->gdimx && pos.y-gwindow_y < r->gdimy)
             // if (!((uint32_t*)screen_under_ptr)[(_pos.x-mwindow_x)*r->gdimy + _pos.y-gwindow_y])
                 ((uint32_t*)screen_under_ptr)[(_pos.x-mwindow_x)*r->gdimy + _pos.y-gwindow_y] = ((uint32_t*)screen_ptr)[(_pos.x-mwindow_x)*r->gdimy + _pos.y-gwindow_y];
 

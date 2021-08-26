@@ -1,5 +1,6 @@
 command_result mapshot_cmd (color_ostream &out, std::vector <std::string> & parameters)
 {
+    int pcnt = parameters.size();
     if (legacy_mode)
     {
         *out2 << COLOR_RED << "This command is not supported in legacy mode" << std::endl;
@@ -10,9 +11,18 @@ command_result mapshot_cmd (color_ostream &out, std::vector <std::string> & para
     if (!enabled)
         return CR_FAILURE;
 
-    // CoreSuspender suspend;
+//    CoreSuspender suspend;
 
     domapshot = 10;
+    if(pcnt>=2)
+    {
+    std::string &param0 = parameters[0];
+        if (param0 == "name" && pcnt >= 2);
+          {
+    std::string &param1 = parameters[1]; //probably can assign directly?
+             mapshotname = param1;
+          }
+    }
 
     return CR_OK;    
 }
@@ -22,7 +32,7 @@ command_result multilevel_cmd (color_ostream &out, std::vector <std::string> & p
     if (!enabled)
         return CR_FAILURE;
 
-    // CoreSuspender suspend;
+//    CoreSuspender suspend;
 
     int pcnt = parameters.size();
 
@@ -94,7 +104,7 @@ command_result multilevel_cmd (color_ostream &out, std::vector <std::string> & p
         {
             if (maxlevels > 0)
                 newmaxlevels = maxlevels - 1;
-        }        
+        }
         else 
         {
             int val;
@@ -109,7 +119,8 @@ command_result multilevel_cmd (color_ostream &out, std::vector <std::string> & p
             if (!legacy_mode)
                 patch_rendering(false);
 
-            ((renderer_cool*)enabler->renderer)->needs_full_update = true;
+           // ((renderer_cool*)enabler->renderer)->needs_full_update = true;
+          //  Tends to leave shadows behind
         }
         else if (!newmaxlevels && maxlevels)
         {
@@ -134,7 +145,7 @@ command_result twbt_cmd (color_ostream &out, std::vector <std::string> & paramet
     if (!enabled)
         return CR_FAILURE;
 
-    // CoreSuspender suspend;
+//    CoreSuspender suspend;
 
     int pcnt = parameters.size();
 
@@ -145,7 +156,7 @@ command_result twbt_cmd (color_ostream &out, std::vector <std::string> & paramet
         if (param0 == "tilesize")
         {
             renderer_cool *r = (renderer_cool*) enabler->renderer;
-            std::string &param2 = parameters[1];
+            //std::string &param2 = parameters[1];
 
             if (pcnt == 1)
             {
@@ -239,10 +250,10 @@ command_result twbt_cmd (color_ostream &out, std::vector <std::string> & paramet
                 *out2 << "Hiding stockpiles unless in [q], [p] or [k] mode" << std::endl;
             else
                 *out2 << "Always showing stockpiles" << std::endl;
-
+                
             enable_building_hooks();
         }
-
+/*
         else if (param0 == "unit_transparency")
         {
             int on;
@@ -256,7 +267,7 @@ command_result twbt_cmd (color_ostream &out, std::vector <std::string> & paramet
             gps->force_full_display_count = 1;
             ((renderer_cool*)enabler->renderer)->needs_full_update = true;
         }
-
+*/
         else if (param0 == "workshop_transparency")
         {
             int on;
@@ -270,6 +281,15 @@ command_result twbt_cmd (color_ostream &out, std::vector <std::string> & paramet
             gps->force_full_display_count = 1;
             ((renderer_cool*)enabler->renderer)->needs_full_update = true;
         }
+        #ifdef tweeting
+        else if (param0 == "debug") {
+            int on;
+            if (!parse_int(parameters[1], on))
+                return CR_WRONG_USAGE;
+            well_info_count = on;
+            *out2 << "Printing debug info repeats at " << (well_info_count) << " debug count is " << ((well_info_count<0) ? "negative" : "positive") << std::endl;
+		}
+		#endif
     }
 
     return CR_OK;    
@@ -280,7 +300,7 @@ command_result colormap_cmd (color_ostream &out, std::vector <std::string> & par
     if (!enabled)
         return CR_FAILURE;
 
-    // CoreSuspender suspend;
+    CoreSuspender suspend;
 
     int pcnt = parameters.size();
 

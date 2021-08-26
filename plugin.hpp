@@ -48,12 +48,17 @@ DFhackCExport command_result plugin_init ( color_ostream &out, vector <PluginCom
     bad_item_flags.bits.in_building = true;
     bad_item_flags.bits.garbage_collect = true;
     bad_item_flags.bits.removed = true;
-    bad_item_flags.bits.dead_dwarf = true;
+    //bad_item_flags.bits.dead_dwarf = true; // Disabled because FF wanted to override dead dwarves.
     bad_item_flags.bits.murder = true;
     bad_item_flags.bits.construction = true;
-    bad_item_flags.bits.in_inventory = true;
+    //bad_item_flags.bits.in_inventory = true; // Disabled because FF wanted to override hauled items
     bad_item_flags.bits.in_chest = true;
-
+    bad_item_flags.bits.hidden = true; //Only visible during d-b-h, when we want them to stand out.
+    
+    //hauled_item_flags.bits.in_inventory = true;
+    //hauled_item_flags.bits.in_job = true;
+    
+    
     // Used only if rendering patch is not available
     skytile = d_init->sky_tile;
     chasmtile = d_init->chasm_tile;
@@ -62,7 +67,7 @@ DFhackCExport command_result plugin_init ( color_ostream &out, vector <PluginCom
 
     if (stat("data/art/white1px.png", &buf) == 0)
     {
-        long dx, dy;        
+        int32_t dx, dy;        
         load_tileset("data/art/white1px.png", &white_texpos, 1, 1, &dx, &dy);
     }
     else
@@ -75,7 +80,7 @@ DFhackCExport command_result plugin_init ( color_ostream &out, vector <PluginCom
 
     if (stat("data/art/transparent1px.png", &buf) == 0)
     {
-        long dx, dy;        
+        int32_t dx, dy;        
         load_tileset("data/art/transparent1px.png", &transparent_texpos, 1, 1, &dx, &dy);    
     }
     else
@@ -86,7 +91,9 @@ DFhackCExport command_result plugin_init ( color_ostream &out, vector <PluginCom
         return CR_FAILURE;
     }
 
-    if (init->display.flag.is_set(init_display_flags::USE_GRAPHICS))
+	graphics_enabled = init->display.flag.is_set(init_display_flags::USE_GRAPHICS);;
+	
+    if (graphics_enabled)
     {
         // Graphics is enabled. Map tileset is already loaded, so use it. Then load text tileset.
 
@@ -117,10 +124,10 @@ DFhackCExport command_result plugin_init ( color_ostream &out, vector <PluginCom
         }
         else
             tilesets.push_back(tilesets[0]);
-    }
+    }        
 
     init_text_tileset_layers();
-    
+
     if (!has_textfont)
     {
         *out2 << COLOR_YELLOW << "TWBT: FONT and GRAPHICS_FONT are the same" << std::endl;
@@ -132,7 +139,7 @@ DFhackCExport command_result plugin_init ( color_ostream &out, vector <PluginCom
     // Load shadows
     if (stat("data/art/shadows.png", &buf) == 0)
     {
-        long dx, dy;        
+        int32_t dx, dy;        
         load_tileset("data/art/shadows.png", shadow_texpos, 8, 1, &dx, &dy);
         shadowsloaded = true;
     }
@@ -184,7 +191,7 @@ DFhackCExport command_result plugin_init ( color_ostream &out, vector <PluginCom
 
         enable_building_hooks();       
         enable_item_hooks();
-        enable_unit_hooks();
+//        enable_unit_hooks();
     }
     else
     {

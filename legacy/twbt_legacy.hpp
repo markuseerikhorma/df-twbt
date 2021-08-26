@@ -6,7 +6,7 @@ static void hook_legacy()
     if (enabled)
         return;
 
-    MemoryPatcher p(Core::getInstance().p.get());    
+    MemoryPatcher p(Core::getInstance().p);    
 
     //XXX: This is a crazy work-around for vtable address for df::renderer not being available yet
     //in dfhack for 0.40.xx, which prevents its subclasses form being instantiated. We're overwriting
@@ -68,7 +68,7 @@ static void unhook_legacy()
 }
 
 static unsigned char screen2[256*256*4];
-static long screentexpos2[256*256];
+static int32_t screentexpos2[256*256];
 static int8_t screentexpos_addcolor2[256*256];
 static uint8_t screentexpos_grayscale2[256*256];
 static uint8_t screentexpos_cf2[256*256];
@@ -120,7 +120,7 @@ struct dwarfmode_hook_legacy : public df::viewscreen_dwarfmodest
 
 
         uint8_t *sctop = gps->screen;
-        long *screentexpostop = gps->screentexpos;
+        int32_t *screentexpostop = gps->screentexpos;
         int8_t *screentexpos_addcolortop = gps->screentexpos_addcolor;
         uint8_t *screentexpos_grayscaletop = gps->screentexpos_grayscale;
         uint8_t *screentexpos_cftop = gps->screentexpos_cf;

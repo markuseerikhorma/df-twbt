@@ -55,7 +55,7 @@ static void load_tileset_layers(tileset &ts, string &path)
     string ext = path.substr(path.length()-4);
     string base = path.substr(0, path.length()-4);
     
-    long dx, dy;        
+    int32_t dx, dy;        
     struct stat buf;
  
     string bg = base+"-bg"+ext;
@@ -84,7 +84,7 @@ static void load_tileset_layers(tileset &ts, string &path)
 static void init_text_tileset_layers()
 {
     tileset &ts = tilesets[1];
-    
+
     for (int i = 0; i < 256; i++)
         ts.bg_texpos[i] = white_texpos;
     for (int i = 0; i < 256; i++)
@@ -148,10 +148,9 @@ static bool load_map_font()
     {
         struct tileset ts;
 
-        long dx, dy;
-        load_tileset(gsmall_font_path, (long*)ts.small_texpos, 16, 16, &dx, &dy);
+        int32_t dx, dy;
+        load_tileset(gsmall_font_path, (int32_t*)ts.small_texpos, 16, 16, &dx, &dy);
         small_map_dispx = dx, small_map_dispy = dy;
-
         load_tileset_layers(ts, gsmall_font_path);
 
         tilesets.push_back(ts);        
@@ -168,8 +167,7 @@ static bool load_map_font()
 
         tilesets.push_back(ts);
         return false;
-    }
-}
+    }}
 
 static bool load_text_font()
 {
@@ -233,14 +231,14 @@ static bool load_text_font()
 
         if (legacy_mode)
         {
-            long dx, dy;
+            int32_t dx, dy;
 
-            load_tileset(small_font_path, (long*)ts.small_texpos, 16, 16, &dx, &dy);
+            load_tileset(small_font_path, (int32_t*)ts.small_texpos, 16, 16, &dx, &dy);
         }
         else
         {
             // Load text font and set it as the main (and only) font in `init` structure
-            load_tileset(small_font_path, (long*)init->font.small_font_texpos, 16, 16, (long*)&init->font.small_font_dispx, (long*)&init->font.small_font_dispy);
+            load_tileset(small_font_path, (int32_t*)init->font.small_font_texpos, 16, 16, (int32_t*)&init->font.small_font_dispx, (int32_t*)&init->font.small_font_dispy);
             memcpy(ts.small_texpos, init->font.small_font_texpos, sizeof(ts.small_texpos));
 
             // Use small font for large too
@@ -273,11 +271,11 @@ static bool handle_override_command(vector<string> &tokens, std::map<string, int
         return false;        
     }
 
-    struct override o;
     char kind = tokens[1][0];
     int id;
-    int basetoken;
-
+    uint basetoken;
+	
+    struct override o;
     // Building or Item
     if (tokens.size() >= 7 && (kind == 'B' || kind == 'I'))
     {
@@ -290,7 +288,6 @@ static bool handle_override_command(vector<string> &tokens, std::map<string, int
 
             if (id == buildings_other_id::WORKSHOP_CUSTOM || id == buildings_other_id::FURNACE_CUSTOM)
                 o.subtypename = tokens[4];
-
             if (tokens[4].length() > 0)
                 o.subtype = atoi(tokens[4].c_str());
             else
@@ -339,7 +336,7 @@ static bool handle_override_command(vector<string> &tokens, std::map<string, int
                     o.type = tt;
                     break;
                 }
-            }
+            }	    
         }
         else if (!parse_enum_or_int<tiletype::tiletype>(typestr, o.type))
             return false;
@@ -422,17 +419,18 @@ static bool handle_override_command(vector<string> &tokens, std::map<string, int
     }
 
     // New foreground colour
-    if (tokens.size() > new_base_token + 0 && tokens[new_base_token + 0].length())
+   if (tokens.size() > new_base_token + 0 && tokens[new_base_token + 0].length())
     {
         int newfg = atoi(tokens[new_base_token + 0].c_str());
-        if (newfg < 1 || newfg > 16)
+        if (newfg < 1 || ((newfg > 16)&&(newfg<100)))
         {
             *out2 << COLOR_YELLOW << "TWBT: invalid new fg " << tokens[basetoken + 0] << std::endl;
             *out2 << COLOR_RESET;
             return false;
         }
 
-        o.fg = newfg - 1;
+        if (newfg>99) o.fg = newfg;
+        else o.fg = newfg - 1;
     }
     else
         o.fg = -1;
@@ -441,14 +439,15 @@ static bool handle_override_command(vector<string> &tokens, std::map<string, int
     if (tokens.size() > new_base_token + 1 && tokens[new_base_token + 1].length())
     {
         int newbg = atoi(tokens[new_base_token + 1].c_str());
-        if (newbg < 1 || newbg > 16)
+        if (newbg < 1 || ((newbg > 16)&&(newbg<100)))
         {
             *out2 << COLOR_YELLOW << "TWBT: invalid new bg " << tokens[new_base_token + 1] << std::endl;
             *out2 << COLOR_RESET;
-            return false;
+            return false;        
         }
 
-        o.bg = newbg - 1;
+        if (newbg>99) o.bg = newbg;
+        else o.bg = newbg - 1;
     }
     else
         o.bg = -1;
@@ -465,7 +464,7 @@ static bool handle_override_command(vector<string> &tokens, std::map<string, int
     }
     else
         o.mat_flag = -1;
-
+        
     // Single material token
     if (tokens.size() > new_base_token + 3 && tokens[new_base_token + 3].length())
     {
@@ -480,7 +479,17 @@ static bool handle_override_command(vector<string> &tokens, std::map<string, int
     }
     else
         o.material = t_matpair(-1, -1);
-
+        
+    #ifdef buildingonlyoverrides
+    if (kind == 'B' && tokens.size() > new_base_token + 6 && tokens[new_base_token + 6].length())
+    {
+        string flag = tokens[new_base_token + 6];
+        
+        if (flag == "BUILDING_TILE_ONLY") {
+			o.building_tile_only = true;
+		}
+    }
+	#endif
     if (!((o.small_texpos.size() && o.small_texpos[0] != -1) || o.fg != -1 || o.bg != -1))
         return false;
 
@@ -524,7 +533,7 @@ static bool load_overrides()
     if(!fseed.is_open())
         return false;
 
-    std::map<string, int> tilesetnames;
+    std::map<string, int> tilesetnames;//TODO: Wouldn't unordered map be better? Eh, it's just startup.
     tilesetnames["map"] = 0;
     tilesetnames["0"] = 0;
     tilesetnames["text"] = 1;
@@ -566,7 +575,7 @@ static bool load_overrides()
                     continue;
                 }
 
-                long dx, dy;        
+                int32_t dx, dy;        
                 load_tileset(small_font_path, ts.small_texpos, 16, 16, &dx, &dy);
                 load_tileset_layers(ts, small_font_path);
 
@@ -584,16 +593,40 @@ static bool load_overrides()
         
         if (tokens[0] == "OVERRIDE")
         {
-            if (tokens.size() > 1)
+            if (tokens.size() > 3)
             {
-                tokens.erase(tokens.begin());
+              tokens.erase(tokens.begin());
+              if (('^' == tokens[2][1]) && tokens[1][0] == 'T' ) //^ At the beggining of tile name makes override for each tilename that begins with string.
+              {
+		        std::string &typestr = tokens[2];
+                std::string tn = typestr.substr(2, typestr.length()-3);//used to use ln
+                FOR_ENUM_ITEMS(tiletype, tt)
+                    {
+                    std::string ttn =  std::string(ENUM_KEY_STR(tiletype,tt)).substr(0,tn.length());
+                    if (ttn != "")
+                        {
+                        if (tn == ttn)
+                            {            
+                                tokens[2]=ENUM_KEY_STR(tiletype,tt);
+                                if (handle_override_command(tokens, tilesetnames))
+                                    any_overrides = true;
+                            }
+		       	       }
+                    }
+              
+		      }
+              else
+              { 
                 if (handle_override_command(tokens, tilesetnames))
                     any_overrides = true;
+                    //TODO LOOP multi-overrides
                 else
                 {
                     *out2 << COLOR_YELLOW << "TWBT: invalid override specification " << str << std::endl;
                     *out2 << COLOR_RESET;
                 }
+                
+              }
             }
 
             continue;
@@ -734,7 +767,6 @@ void update_custom_building_overrides()
         if (!overrides[j])
             continue;
 
-        //Custom building overrides.
         for (auto it = overrides[j]->building_overrides.begin(); it != overrides[j]->building_overrides.end(); it++)
         {
             override_group &og = *it;
@@ -815,7 +847,7 @@ bool override::material_matches(int16_t mat_type, int32_t mat_index)
     return material.mat_type == mat_type && material.mat_index == mat_index;
 }
 
-long override::get_texpos(vector<long>&collection, unsigned int seed)
+int32_t override::get_texpos(vector<int32_t>&collection, unsigned int seed)
 {
     switch (multi)
     {

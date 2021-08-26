@@ -155,7 +155,7 @@ static void screen_to_texid_legacy(df::renderer *r, int tile, struct texture_ful
     int fg   = (s[1] + bold) % 16;
     int bg   = s[2] % 16;
 
-    const long texpos = r->screentexpos[tile];
+    const int32_t texpos = r->screentexpos[tile];
 
     if (!texpos)
     {
@@ -242,7 +242,7 @@ static void write_tile_arrays_legacy(df::renderer *r, int x, int y, GLfloat *fg,
             {
                 if (s0 == 88 && df::global::cursor->x == xx && df::global::cursor->y == yy)
                 {
-                    long texpos = cursor_small_texpos;
+                    int32_t texpos = cursor_small_texpos;
                     if (texpos)
                         ret.texpos = texpos;
                 }

@@ -34,7 +34,7 @@ struct renderer_cool : renderer_opengl
     int needs_zoom;
     bool needs_full_update;
     unsigned char *gscreen;
-    long *gscreentexpos;
+    int32_t *gscreentexpos;
     float goff_y_gl;
 
     MapExtras::MapCache * map_cache;
@@ -48,6 +48,8 @@ struct renderer_cool : renderer_opengl
     void allocate_buffers(int tiles, int extra_tiles);
     void init_buffers_and_coords(int tiles, int extra_tiles);
     void update_map_tile(int x, int y);
+    void update_map_tile2(int x, int y);//TODO might cause issues if not here originally
+    void update_building_tile(int x, int y);
     void reshape_zoom_swap();
 
     virtual void update_tile(int x, int y);

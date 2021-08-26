@@ -1,14 +1,14 @@
-DFHACKVER ?= 0.44.12-r2
+DFHACKVER ?= 0.43.03-r1
 
 DFVERNUM = `echo $(DFHACKVER) | sed -e s/-.*// -e s/\\\\.//g`
 
-TWBT_VER ?= "6.xx"
+TWBT_VER ?= "6.61"
 
 DF ?= /home/maq/DF/dfhack_compile/4303/DF4303/df_linux
 DH ?= /home/maq/DF/dfhack_compile/4303/dfhack
 
 SRC = twbt.cpp
-DEP = renderer.hpp config.hpp dungeonmode.hpp dwarfmode.hpp renderer_twbt.h commands.hpp plugin.hpp tileupdate_text.hpp tileupdate_map.hpp patches.hpp zoomfix.hpp buildings.hpp items.hpp units.hpp Makefile legacy/renderer_legacy.hpp legacy/twbt_legacy.hpp
+DEP = renderer.hpp config.hpp dungeonmode.hpp dwarfmode.hpp renderer_twbt.h commands.hpp plugin.hpp tileupdate_text.hpp tileupdate_map.hpp patches.hpp zoomfix.hpp buildings.hpp items.hpp Makefile legacy/renderer_legacy.hpp legacy/twbt_legacy.hpp
 
 ifeq ($(shell uname -s), Darwin)
 	ifneq (,$(findstring 0.34,$(DFHACKVER)))
@@ -25,14 +25,15 @@ INC = -I"$(DH)/library/include" -I"$(DH)/library/proto" -I"$(DH)/depends/protobu
 LIB = -L"$(DH)/build/library" -ldfhack -ldfhack-version
 
 CXX ?= c++
-CFLAGS = $(INC) -m64 -DLINUX_BUILD -O3 -D_GLIBCXX_USE_CXX11_ABI=0
+CFLAGS = $(INC) -m32 -DLINUX_BUILD -O3 -D_GLIBCXX_USE_CXX11_ABI=0
+
 LDFLAGS = $(LIB) -shared 
 
 ifeq ($(shell uname -s), Darwin)
 	export MACOSX_DEPLOYMENT_TARGET=10.6
-	CXX = g++-7
+	CXX = g++-4.8
 	CFLAGS += -std=gnu++0x #-stdlib=libstdc++
-	CFLAGS += -Wno-tautological-compare -I/usr/local/include
+	CFLAGS += -Wno-tautological-compare
 	LDFLAGS += -framework OpenGL -mmacosx-version-min=10.6 -undefined dynamic_lookup
 else
 	CFLAGS += -std=c++0x -fPIC

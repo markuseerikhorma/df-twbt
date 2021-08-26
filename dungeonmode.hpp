@@ -44,7 +44,9 @@ struct dungeonmode_hook : public df::viewscreen_dungeonmodest
         r->reshape_zoom_swap();
 
         memset(gscreen_under, 0, r->gdimx*r->gdimy*sizeof(uint32_t));
+        memset(gscreen_building, 0, r->gdimx*r->gdimy*sizeof(uint32_t));
         screen_under_ptr = gscreen_under;
+        screen_building_ptr = gscreen_building;
         screen_ptr = gscreen;
         mwindow_x = gwindow_x;
 
@@ -61,7 +63,7 @@ struct dungeonmode_hook : public df::viewscreen_dungeonmodest
         static bool patched = false;
         if (!patched)
         {
-            MemoryPatcher p(Core::getInstance().p.get());
+            MemoryPatcher p(Core::getInstance().p);
 
             for (int j = 0; j < sizeof(p_advmode_render)/sizeof(patchdef); j++)
                 apply_patch(&p, p_advmode_render[j]);
@@ -84,11 +86,12 @@ struct dungeonmode_hook : public df::viewscreen_dungeonmodest
         // These values may change from the main thread while being accessed from the rendering thread,
         // and that will cause flickering of overridden tiles at least, so save them here
         gwindow_x = *df::global::window_x;
+        mwindow_x = gwindow_x; //this also got offset in interpose, so need to rerecord
         gwindow_y = *df::global::window_y;
         gwindow_z = *df::global::window_z;                
 
         uint8_t *sctop = gps->screen;
-        long *screentexpostop = gps->screentexpos;
+        int32_t *screentexpostop = gps->screentexpos;
         int8_t *screentexpos_addcolortop = gps->screentexpos_addcolor;
         uint8_t *screentexpos_grayscaletop = gps->screentexpos_grayscale;
         uint8_t *screentexpos_cftop = gps->screentexpos_cf;
@@ -128,8 +131,10 @@ struct dungeonmode_hook : public df::viewscreen_dungeonmodest
             gps->screentexpos_cf = mscreentexpos_cf;
             gps->screentexpos_cbr = mscreentexpos_cbr;
 
-            memset(mscreen_under, 0, r->gdimx*r->gdimy*sizeof(uint32_t));
-            screen_under_ptr = mscreen_under;
+			memset(gscreen_under, 0, r->gdimx*r->gdimy*sizeof(uint32_t));
+			memset(gscreen_building, 0, r->gdimx*r->gdimy*sizeof(uint32_t));
+			screen_under_ptr = gscreen_under;
+			screen_building_ptr = gscreen_building;
             screen_ptr = mscreen;
 
             bool lower_level_rendered = false;
@@ -160,6 +165,7 @@ struct dungeonmode_hook : public df::viewscreen_dungeonmodest
                 int x00 = x0;
                 int zz = zz0 - p + 1; // Last rendered zlevel in gscreen, the tiles of which we're checking below
 
+
                 int x1 = std::min(r->gdimx, world->map.x_count-*df::global::window_x);
                 int y1 = std::min(r->gdimy, world->map.y_count-*df::global::window_y);
                 for (int x = x0; x < x1; x++)
@@ -167,6 +173,7 @@ struct dungeonmode_hook : public df::viewscreen_dungeonmodest
                     for (int y = 0; y < y1; y++)
                     {
                         const int tile = x * r->gdimy + y, stile = tile * 4;
+
                         unsigned char ch = gscreen[stile+0];
 
                         // Continue if the tile is not empty and doesn't look like a ramp
@@ -182,27 +189,27 @@ struct dungeonmode_hook : public df::viewscreen_dungeonmodest
                         int yyquot = yy >> 4, yyrem = yy & 15;
 
                         // If the tile looks like a ramp, check that it's really a ramp
-                        // Also, no need to go deeper if the ramp is covered with water
+                        // Also, no need to go deeper if the ramp is covered with water                      
                         if (ch == 31)
                         {
                             df::map_block *block0 = world->map.block_index[xxquot][yyquot][zz];
                             if (block0->tiletype[xxrem][yyrem] != df::tiletype::RampTop || block0->designation[xxrem][yyrem].bits.flow_size)
-                                continue;
+                                continue;                         
                         }
-
+                        
                         // If the tile is empty, render the next zlevel (if not rendered already)
                         if (!lower_level_rendered)
                         {
                             multi_rendered = true;
-
-                            // All tiles to the left were not empty, so skip them
+                             // All tiles to the left were not empty, so skip them
                             x0 = x;
-
+                            
                             (*df::global::window_x) += x0;
                             init->display.grid_x -= x0;
                             mwindow_x = gwindow_x + x0;
 
                             memset(mscreen_under, 0, (r->gdimx-x0)*r->gdimy*sizeof(uint32_t));
+                            memset(mscreen_building, 0, (r->gdimx-x0)*r->gdimy*sizeof(uint32_t));
                             render_map();
 
                             (*df::global::window_x) -= x0;
@@ -213,9 +220,11 @@ struct dungeonmode_hook : public df::viewscreen_dungeonmodest
                             lower_level_rendered = true;
                         }
 
+
                         const int tile2 = (x-(x00)) * r->gdimy + y, stile2 = tile2 * 4;
 
                         *((uint32_t*)gscreen + tile) = *((uint32_t*)mscreen + tile2);
+                        *((uint32_t*)gscreen_building + tile) = *((uint32_t*)mscreen_building + tile2);
                         *((uint32_t*)gscreen_under + tile) = *((uint32_t*)mscreen_under + tile2);
                         if (*(mscreentexpos+tile2))
                         {
@@ -225,8 +234,10 @@ struct dungeonmode_hook : public df::viewscreen_dungeonmodest
                             *(gscreentexpos_cf + tile) = *(mscreentexpos_cf + tile2);
                             *(gscreentexpos_cbr + tile) = *(mscreentexpos_cbr + tile2);
                         }
+
                         gscreen[stile+3] = (0x10*p) | (gscreen[stile+3]&0x0f);
                     }
+
                 }
 
                 if (p++ >= maxp)
@@ -234,6 +245,8 @@ struct dungeonmode_hook : public df::viewscreen_dungeonmodest
             } while(lower_level_rendered);
 
             (*df::global::window_z) = zz0;
+
+            //(*df::global::window_z)-=1;
         }
 
         {
@@ -268,16 +281,22 @@ struct dungeonmode_hook : public df::viewscreen_dungeonmodest
         if (block_index_size != world->map.x_count_block*world->map.y_count_block*world->map.z_count_block || (my_block_index && my_block_index[0] != world->map.block_index[0][0][0]))
         {
             free(my_block_index);
-            block_index_size = world->map.x_count_block*world->map.y_count_block*world->map.z_count_block;
+            mapxb = world->map.x_count_block;
+            mapyb = world->map.y_count_block;
+            mapzb  = world->map.z_count_block;
+            block_index_size = mapxb*mapyb*mapzb;
             my_block_index = (df::map_block**)malloc(block_index_size*sizeof(void*));
+            mapx = world->map.x_count;
+            mapy = world->map.y_count;
+            
 
-            for (int x = 0; x < world->map.x_count_block; x++)
+            for (int x = 0; x < mapxb; x++)
             {
-                for (int y = 0; y < world->map.y_count_block; y++)
+                for (int y = 0; y < mapyb; y++)
                 {
-                    for (int z = 0; z < world->map.z_count_block; z++)
+                    for (int z = 0; z < mapzb; z++)
                     {
-                        my_block_index[x*world->map.y_count_block*world->map.z_count_block + y*world->map.z_count_block + z] = world->map.block_index[x][y][z];
+                        my_block_index[x*mapyb*mapzb + y*mapzb + z] = world->map.block_index[x][y][z];
                     }                    
                 }
             }
